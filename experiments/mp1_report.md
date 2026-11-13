@@ -14,8 +14,13 @@ event. Name the functions it passes through, where memory, the system prompt and
 through the gateway (which container calls which, on which URL).
 
 ## 3. Memory: my choice, with numbers
-TODO: window or summary, and your KEEP_TURNS. Use numbers from your Session 19 report (tokens per call, recall at
-turn 17), and say what your choice forgets, or risks getting wrong. What would a customer notice?
+I chose the sliding window strategy with `KEEP_TURNS=4`. In my Session 19 run, the final recall turn cost 911
+tokens with the window and 1,311 with summarization, compared with 1,803 tokens when the full history was sent.
+However, neither the window nor the summary recalled the reference number planted at turn 2 by turn 17; only the
+full history did. I chose the window because ShopAssist conversations are usually short order questions and
+follow-ups, and it keeps the prompt size lower and predictable without adding a summarization call. A four-turn
+window also keeps the order number available through the workbook's four-turn memory probe. After more than four
+turns, older details can fall out of view, so a customer may need to repeat an order number or other earlier detail.
 
 ## 4. Tools and validation
 TODO: your three tools and what you validate (order id format, pincode, speed, reason). Give one bad argument your
