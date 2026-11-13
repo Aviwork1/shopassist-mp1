@@ -4,16 +4,17 @@ Session 19 measured three strategies on a 17-turn conversation: send everything 
 window (flat cost, forgets early turns silently), and a summary (recovers recall, but costs an extra call and can
 summarise wrongly). Your server talks to many customers, so "send everything" is not an option.
 
-TODO MP1-T4: choose "window" or "summary" for ShopAssist, and set KEEP_TURNS. Justify both in
-experiments/mp1_report.md, section 3, with numbers from YOUR Session 19 report (experiments/s19_chat_memory.md in your
-work repo). You can override both without changing code:  MEMORY=window KEEP_TURNS=6  in .env or `docker run -e`.
+ShopAssist uses a four-turn sliding window. Store conversations are usually short order questions and follow-ups,
+so this keeps recent context available with predictable prompt size. Older details can be forgotten; increase
+KEEP_TURNS or select the summary strategy if a deployment needs longer recall. Override with MEMORY and KEEP_TURNS
+in .env or Docker environment variables.
 """
 import os
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-STRATEGY = os.getenv("MEMORY") or "window"         # "window" or "summary"
-KEEP_TURNS = int(os.getenv("KEEP_TURNS") or 4)   # how many earlier turns (question + answer) the model sees
+STRATEGY = os.getenv("MEMORY", "window")           # "window" or "summary"
+KEEP_TURNS = int(os.getenv("KEEP_TURNS", "4"))     # earlier turns (question + answer) the model sees
 
 
 def window(history: list, keep_turns: int = KEEP_TURNS) -> list:
