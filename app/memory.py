@@ -13,8 +13,8 @@ import os
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-STRATEGY = os.getenv("MEMORY", "window")           # "window" or "summary"
-KEEP_TURNS = int(os.getenv("KEEP_TURNS", "4"))     # earlier turns (question + answer) the model sees
+STRATEGY = os.getenv("MEMORY") or "window"         # "window" or "summary"
+KEEP_TURNS = int(os.getenv("KEEP_TURNS") or 4)     # earlier turns (question + answer) the model sees
 
 
 def window(history: list, keep_turns: int = KEEP_TURNS) -> list:

@@ -33,10 +33,9 @@ class ChatResponse(BaseModel):
 
 @app.get("/health")
 def health():
-    """TODO MP1-T5: also report the running configuration, so your demo (and an auditor) can see it:
-        "memory": memory.STRATEGY,   "keep_turns": memory.KEEP_TURNS,   "tools": sorted(TOOLS)
-    """
-    return {"status": "ok", "model": agent.MODEL, "gateway": agent.GATEWAY_URL}
+    """Report liveness and the active model, gateway, memory, and tool configuration."""
+    return {"status": "ok", "model": agent.MODEL, "gateway": agent.GATEWAY_URL,
+            "memory": memory.STRATEGY, "keep_turns": memory.KEEP_TURNS, "tools": sorted(TOOLS)}
 
 
 def build_messages(history: list, message: str) -> list:
