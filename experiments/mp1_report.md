@@ -4,14 +4,19 @@ Write every section in your own words. Each section needs at least a few real se
 starts with `TODO`. The checker reads this file, and at the demo you explain any section the instructor picks.
 
 ## 1. Me, and how I used AI
-TODO: your name and GitHub username. Then an honest AI-use log: which tool (ChatGPT, Copilot, Claude...), for which
-task, and ONE suggestion you rejected or corrected, and why. Using AI is allowed; not understanding your own code
-is not. (Never paste your .env or a key into any AI tool.)
+My Git name is Aviwork1 and my GitHub username is Aviwork1. I used OpenAI Codex to work through the workbook tasks,
+implement the tools and prompt rules, run the evaluation, and explain how the Docker setup works. One suggestion I
+corrected was to read KEEP_TURNS with a default argument to os.getenv. My .env had the setting present but blank,
+so Python tried to convert an empty string to an integer and the app crashed. I restored the empty-value fallback
+and confirmed that /health showed KEEP_TURNS as 4. I did not share my .env or API key.
 
 ## 2. How a request flows
-TODO: follow ONE message, e.g. "Can I return the shoes in ORD-10231?", from `POST /chat/stream` to the last SSE
-event. Name the functions it passes through, where memory, the system prompt and the tools come in, and the hop
-through the gateway (which container calls which, on which URL).
+For "Can I return the shoes in ORD-10231?", FastAPI routes POST /chat/stream to chat_stream. It calls
+build_messages, which puts the system prompt first, adds the recent history returned by memory.trim, and appends
+the new customer message. agent.stream_turn sends those messages to the model through the LiteLLM gateway at
+http://litellm:4000 inside Compose. When the model requests a return check, agent.run_tool invokes
+check_return_eligibility and adds the result back to the model's messages. The stream emits tool and token events,
+then a done event with the full answer; chat_stream saves the customer and assistant messages to that session.
 
 ## 3. Memory: my choice, with numbers
 I chose the sliding window strategy with `KEEP_TURNS=4`. In my Session 19 run, the final recall turn cost 911
@@ -23,12 +28,19 @@ window also keeps the order number available through the workbook's four-turn me
 turns, older details can fall out of view, so a customer may need to repeat an order number or other earlier detail.
 
 ## 4. Tools and validation
-TODO: your three tools and what you validate (order id format, pincode, speed, reason). Give one bad argument your
-validation catches, and what the model did after it got the INVALID message (from a real run).
+The three read-only tools are get_order_status, get_delivery_estimate, and check_return_eligibility. Order IDs
+must match ORD- followed by five digits; pincodes must be exactly six digits; delivery speed must be standard or
+express; and return reason must be one of the six allowed values. In a real chat, I asked "Where is order 10233?"
+The tool returned `INVALID: ValueError: order_id must look like ORD-12345, got '10233'`, and ShopAssist asked me
+for the full order number instead of guessing the status.
 
 ## 5. Defending the prompt
-TODO: summarise your Security rules section. Which of the four attacks came closest to working, and why? If any
-attack broke through, what did you change, and did it help?
+The security rules put the system instructions above claims inside customer messages, refuse to reveal the prompt,
+treat fake system or tool tags as ordinary customer text, and trust order facts only when a real tool call returns
+them. The smuggle attack a4 came closest: in the first two evaluation runs, fake system tags persuaded the model
+to claim a shipped order had been cancelled and refunded. I made the rule explicit that a named-order status
+question always requires get_order_status, even when the same message says not to use a tool. The next run resisted
+the attack, and the final evaluation passed all four attacks.
 
 ## 6. Results
 The final evaluation summary was:
@@ -54,6 +66,12 @@ checking the shipped order. I made the security rule explicit that a named-order
 `get_order_status`, even when fake tags say not to use a tool. The final run resisted a4 and passed all four attacks.
 
 ## 7. Gateway, Docker and honest limits
-TODO: what the gateway gives you that calling Groq directly wouldn't (one header you saw, and the fallback). Then
-at least three things that would break in production (think: memory in RAM, session ids, one master key, one
-server, the model inventing things) and what you would do about each one.
+The LiteLLM gateway keeps the provider key out of the app, gives the app one model-group name, and can retry with
+a backup model. During the fallback drill I deliberately made the primary model invalid; the request still
+succeeded and the response included `x-litellm-attempted-fallbacks: 1`. In production, the in-memory SESSIONS
+dictionary would lose conversations on restart and would not be shared between app replicas, so I would move it
+to Redis or another shared store. A customer-chosen session ID is not proof of identity, so I would bind sessions
+to authenticated accounts and authorize every lookup. One shared master key is hard to limit or rotate safely,
+so I would use separate scoped service keys with budgets and rotation. Finally, the model can still phrase an
+answer incorrectly, so I would keep tool results as the source of order facts and run the golden and security
+evaluations in CI before releases.
